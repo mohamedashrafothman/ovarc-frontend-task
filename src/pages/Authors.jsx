@@ -1,37 +1,28 @@
-import React, { useEffect, useMemo, useState } from "react";
-import Header from "../components/Header";
-import Loading from "./Loading";
-import Table from "../components/Table/Table";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-
-import Modal from "../components/Modal";
 import TableActions from "../components/ActionButton/TableActions";
+import Header from "../components/Header";
+import Modal from "../components/Modal";
+import Table from "../components/Table/Table";
+import useLibraryData from "../hooks/useLibraryData";
+import Loading from "./Loading";
 
 const Authors = () => {
-	const [authors, setAuthors] = useState([]);
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [searchParams] = useSearchParams();
 	const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
 	const [editingRowId, setEditingRowId] = useState(null);
 	const [editName, setEditName] = useState("");
 	const [newName, setNewName] = useState("");
 	const [showModal, setShowModal] = useState(false);
 
+	// API state
+	const { authors, isLoading, setAuthors } = useLibraryData({ searchTerm });
+
 	// Sync searchTerm with query params
 	useEffect(() => {
 		const search = searchParams.get("search") || "";
 		setSearchTerm(search);
 	}, [searchParams]);
-
-	// Fetch JSON data
-	useEffect(() => {
-		fetch("/data/authors.json")
-			.then((response) => response.json())
-			.then((data) => {
-				console.log("Fetched authors:", data);
-				setAuthors(Array.isArray(data) ? data : [data]);
-			})
-			.catch((error) => console.error("Error fetching authors:", error));
-	}, []);
 
 	// filter based on search
 	const filteredAuthors = useMemo(() => {
@@ -157,12 +148,16 @@ const Authors = () => {
 		closeModal();
 	};
 
+	if (isLoading) {
+		return <Loading />;
+	}
+
 	return (
 		<div className="py-6">
 			<Header addNew={openModal} title="Authors List" />
 			{authors.length > 0 ? <Table data={filteredAuthors} columns={columns} /> : <Loading />}
 			<Modal
-				title={" New Author"}
+				title={"New Author"}
 				save={handleAddNew}
 				cancel={closeModal}
 				show={showModal}

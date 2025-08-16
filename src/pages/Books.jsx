@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
-import Header from "../components/Header";
-import Loading from "./Loading";
-import BooksTable from "../components/BooksTable";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import BooksTable from "../components/BooksTable";
+import Header from "../components/Header";
 import Modal from "../components/Modal";
+import useLibraryData from "../hooks/useLibraryData";
+import Loading from "./Loading";
 
 const Books = () => {
-	const [books, setBooks] = useState([]);
-	const [authors, setAuthors] = useState([]);
-	const [searchParams, setSearchParams] = useSearchParams();
+	// state hooks
+	const [searchParams] = useSearchParams();
 	const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
 	const [editingRowId, setEditingRowId] = useState(null);
 	const [editName, setEditName] = useState("");
@@ -19,24 +19,14 @@ const Books = () => {
 		page_count: "",
 	});
 
+	// API state
+	const { storeBooks: books = [], authors, isLoading, setBooks } = useLibraryData({ searchTerm });
+
 	// Sync search term with URL params
 	useEffect(() => {
 		const search = searchParams.get("search") || "";
 		setSearchTerm(search);
 	}, [searchParams]);
-
-	// Fetch data
-	useEffect(() => {
-		Promise.all([
-			fetch("/data/books.json").then((response) => response.json()),
-			fetch("/data/authors.json").then((response) => response.json()),
-		])
-			.then(([booksData, authorsData]) => {
-				setBooks(Array.isArray(booksData) ? booksData : [booksData]);
-				setAuthors(Array.isArray(authorsData) ? authorsData : [authorsData]);
-			})
-			.catch((error) => console.error("Error fetching data:", error));
-	}, []);
 
 	// Filter books based on search
 	const filteredBooks = books.filter((book) => {
@@ -75,6 +65,10 @@ const Books = () => {
 		setShowModal(false);
 	};
 
+	if (isLoading) {
+		return <Loading />;
+	}
+
 	return (
 		<div className="py-6">
 			<Header addNew={() => setShowModal(true)} title="Books List" />
@@ -90,7 +84,7 @@ const Books = () => {
 					deleteBook={deleteBook}
 				/>
 			) : (
-				<Loading />
+				<p className="text-gray-600">No data found.</p>
 			)}
 			<Modal
 				title="New Book"
@@ -123,7 +117,12 @@ const Books = () => {
 							id="page_count"
 							type="number"
 							value={newBook.page_count}
-							onChange={(e) => setNewBook({ ...newBook, page_count: e.target.value })}
+							onChange={(e) =>
+								setNewBook({
+									...newBook,
+									page_count: e.target.value,
+								})
+							}
 							className="border border-gray-300 rounded p-2 w-full"
 							placeholder="Enter Page Count"
 							required
@@ -136,7 +135,12 @@ const Books = () => {
 						<select
 							id="author_id"
 							value={newBook.author_id}
-							onChange={(e) => setNewBook({ ...newBook, author_id: e.target.value })}
+							onChange={(e) =>
+								setNewBook({
+									...newBook,
+									author_id: e.target.value,
+								})
+							}
 							className="border border-gray-300 rounded p-2 w-full"
 							required>
 							<option value="" disabled>

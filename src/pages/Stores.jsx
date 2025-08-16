@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
-import Header from "../components/Header";
-import Loading from "./Loading";
-import Table from "../components/Table/Table";
-import { useSearchParams } from "react-router-dom";
-import Modal from "../components/Modal";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import TableActions from "../components/ActionButton/TableActions";
-import { useNavigate } from "react-router-dom";
+import Header from "../components/Header";
+import Modal from "../components/Modal";
+import Table from "../components/Table/Table";
+import useLibraryData from "../hooks/useLibraryData";
+import Loading from "./Loading";
 
 const Stores = () => {
 	const navigate = useNavigate();
@@ -15,8 +15,7 @@ const Stores = () => {
 	};
 
 	// State declarations
-	const [stores, setStores] = useState([]);
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [searchParams] = useSearchParams();
 	const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
 	const [editingRowId, setEditingRowId] = useState(null);
 	const [editName, setEditName] = useState("");
@@ -26,22 +25,37 @@ const Stores = () => {
 		address: "",
 	});
 
+	// API state
+	const { stores, isLoading, setStores } = useLibraryData({ searchTerm });
+
 	// Sync search term with URL query parameters
 	useEffect(() => {
 		const search = searchParams.get("search") || "";
 		setSearchTerm(search);
 	}, [searchParams]);
 
-	// Fetch stores data
-	useEffect(() => {
-		fetch("/data/stores.json")
-			.then((response) => response.json())
-			.then((data) => {
-				console.log("Fetched stores:", data);
-				setStores(Array.isArray(data) ? data : [data]);
-			})
-			.catch((error) => console.error("Error fetching stores:", error));
-	}, []);
+	// Handle store deletion
+	const deleteStore = useCallback(
+		(id, name) => {
+			if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+				setStores((prevStores) => prevStores.filter((store) => store.id !== id));
+				setEditingRowId(null);
+				setEditName("");
+			}
+		},
+		[setStores]
+	);
+	// Save edited name
+	const handleSave = useCallback(
+		(id) => {
+			setStores(
+				stores.map((store) => (store.id === id ? { ...store, name: editName } : store))
+			);
+			setEditingRowId(null);
+			setEditName("");
+		},
+		[editName, setStores, stores]
+	);
 
 	// Enrich stores with computed address and filter based on search term
 	const filteredStores = useMemo(() => {
@@ -99,29 +113,13 @@ const Stores = () => {
 				),
 			},
 		],
-		[editingRowId, editName]
+		[editingRowId, editName, handleSave, deleteStore]
 	);
-
-	// Handle store deletion
-	const deleteStore = (id, name) => {
-		if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-			setStores((prevStores) => prevStores.filter((store) => store.id !== id));
-			setEditingRowId(null);
-			setEditName("");
-		}
-	};
 
 	// Initiate editing
 	const handleEdit = (store) => {
 		setEditingRowId(store.id);
 		setEditName(store.name);
-	};
-
-	// Save edited name
-	const handleSave = (id) => {
-		setStores(stores.map((store) => (store.id === id ? { ...store, name: editName } : store)));
-		setEditingRowId(null);
-		setEditName("");
 	};
 
 	// Cancel editing
@@ -212,6 +210,11 @@ const Stores = () => {
 	const onRowClick = (e, rw) => {
 		handleViewStoreInventory(rw.id);
 	};
+
+	if (isLoading) {
+		return <Loading />;
+	}
+
 	return (
 		<div className="py-6">
 			<Header addNew={openModal} title="Stores List" />

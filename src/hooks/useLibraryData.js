@@ -1,13 +1,6 @@
 // src/hooks/useLibraryData.js
 import { useEffect, useMemo, useState } from "react";
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
-const API_ROUTES = {
-	stores: USE_MOCK ? "/api/stores" : "/data/stores.json",
-	books: USE_MOCK ? "/api/books" : "/data/books.json",
-	authors: USE_MOCK ? "/api/authors" : "/data/authors.json",
-	inventory: USE_MOCK ? "/api/inventory" : "/data/inventory.json",
-};
+import { API_ROUTES } from "../utils/vars";
 
 const useLibraryData = ({ storeId = null, searchTerm = "" } = {}) => {
 	// State for data
@@ -15,28 +8,27 @@ const useLibraryData = ({ storeId = null, searchTerm = "" } = {}) => {
 	const [authors, setAuthors] = useState([]);
 	const [stores, setStores] = useState([]);
 	const [inventory, setInventory] = useState([]);
+	const [isLoadingState, setIsLoadingState] = useState(true);
 
 	// Fetch all data
 	useEffect(() => {
-		fetch(API_ROUTES.stores)
-			.then((response) => response.json())
-			.then((data) => setStores(Array.isArray(data) ? data : [data]))
-			.catch((error) => console.error("Error fetching stores:", error));
-
-		fetch(API_ROUTES.books)
-			.then((response) => response.json())
-			.then((data) => setBooks(Array.isArray(data) ? data : [data]))
-			.catch((error) => console.error("Error fetching books:", error));
-
-		fetch(API_ROUTES.authors)
-			.then((response) => response.json())
-			.then((data) => setAuthors(Array.isArray(data) ? data : [data]))
-			.catch((error) => console.error("Error fetching authors:", error));
-
-		fetch(API_ROUTES.inventory)
-			.then((response) => response.json())
-			.then((data) => setInventory(Array.isArray(data) ? data : [data]))
-			.catch((error) => console.error("Error fetching inventory:", error));
+		Promise.all([
+			fetch(API_ROUTES.stores).then((res) => res.json()),
+			fetch(API_ROUTES.books).then((res) => res.json()),
+			fetch(API_ROUTES.authors).then((res) => res.json()),
+			fetch(API_ROUTES.inventory).then((res) => res.json()),
+		])
+			.then(([storesData, booksData, authorsData, inventoryData]) => {
+				setStores(Array.isArray(storesData) ? storesData : [storesData]);
+				setBooks(Array.isArray(booksData) ? booksData : [booksData]);
+				setAuthors(Array.isArray(authorsData) ? authorsData : [authorsData]);
+				setInventory(Array.isArray(inventoryData) ? inventoryData : [inventoryData]);
+				setIsLoadingState(false);
+			})
+			.catch((error) => {
+				console.error("Error fetching data:", error);
+				setIsLoadingState(false);
+			});
 	}, []);
 
 	// Create lookup maps
@@ -97,9 +89,6 @@ const useLibraryData = ({ storeId = null, searchTerm = "" } = {}) => {
 		});
 	}, [books, inventory, authorMap, storeMap]);
 
-	// Loading state
-	const isLoading = !books.length || !authors.length || !stores.length || !inventory.length;
-
 	return {
 		books,
 		setBooks,
@@ -111,7 +100,7 @@ const useLibraryData = ({ storeId = null, searchTerm = "" } = {}) => {
 		storeMap,
 		storeBooks,
 		booksWithStores,
-		isLoading,
+		isLoading: isLoadingState,
 		currentStore: stores.find((store) => store.id === parseInt(storeId, 10)),
 	};
 };

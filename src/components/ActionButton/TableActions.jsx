@@ -1,7 +1,6 @@
-import React from "react";
-import ActionButton from "../ActionButton/ActionButton";
-import pencil from "../../assets/Pencil.png";
 import trash from "../../assets/Bin.png";
+import pencil from "../../assets/Pencil.png";
+import ActionButton from "../ActionButton/ActionButton";
 
 const TableActions = ({ row, onEdit, onDelete }) => {
 	return (
