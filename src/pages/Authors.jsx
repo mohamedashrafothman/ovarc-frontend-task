@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import TableActions from "../components/ActionButton/TableActions";
 import Header from "../components/Header";
 import Modal from "../components/Modal";
 import Table from "../components/Table/Table";
+import { useAuth } from "../context/AuthContext";
 import useLibraryData from "../hooks/useLibraryData";
 import Loading from "./Loading";
 
 const Authors = () => {
+	const { isAuthenticated } = useAuth();
 	const [searchParams] = useSearchParams();
 	const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
 	const [editingRowId, setEditingRowId] = useState(null);
@@ -23,6 +25,43 @@ const Authors = () => {
 		const search = searchParams.get("search") || "";
 		setSearchTerm(search);
 	}, [searchParams]);
+
+	const deleteAuthor = useCallback(
+		(id, first_name, last_name) => {
+			// show prompt
+
+			if (window.confirm(`Are you sure you want to delete ${first_name} ${last_name}?`)) {
+				setAuthors((prevAuthors) => prevAuthors.filter((author) => author.id !== id));
+				setEditingRowId(null);
+				setEditName("");
+				setNewName("");
+			}
+		},
+		[setAuthors]
+	);
+	const handleEdit = (author) => {
+		setEditingRowId(author.id);
+		setEditName(`${author.first_name} ${author.last_name}`);
+	};
+
+	const handleSave = useCallback(
+		(id) => {
+			const [first_name, ...last_name_parts] = editName.trim().split(" ");
+			const last_name = last_name_parts.join(" ");
+
+			setAuthors(
+				authors.map((author) =>
+					author.id === id
+						? { ...author, first_name, last_name: last_name || author.last_name }
+						: author
+				)
+			);
+
+			setEditingRowId(null);
+			setEditName("");
+		},
+		[authors, editName, setAuthors]
+	);
 
 	// filter based on search
 	const filteredAuthors = useMemo(() => {
@@ -61,62 +100,34 @@ const Authors = () => {
 						`${row.original.first_name} ${row.original.last_name}`
 					),
 			},
-			{
-				header: "Actions",
-				id: "actions",
-				cell: ({ row }) => (
-					<TableActions
-						row={row}
-						onEdit={
-							editingRowId === row.original.id
-								? handleCancel
-								: () => handleEdit(row.original)
-						}
-						onDelete={() =>
-							deleteAuthor(
-								row.original.id,
-								row.original.first_name,
-								row.original.last_name
-							)
-						}
-					/>
-				),
-			},
+			...(isAuthenticated
+				? [
+						{
+							header: "Actions",
+							id: "actions",
+							cell: ({ row }) => (
+								<TableActions
+									row={row}
+									onEdit={
+										editingRowId === row.original.id
+											? handleCancel
+											: () => handleEdit(row.original)
+									}
+									onDelete={() =>
+										deleteAuthor(
+											row.original.id,
+											row.original.first_name,
+											row.original.last_name
+										)
+									}
+								/>
+							),
+						},
+					]
+				: []),
 		],
-		[[editingRowId, editName]]
+		[deleteAuthor, editName, editingRowId, handleSave, isAuthenticated]
 	);
-
-	const deleteAuthor = (id, first_name, last_name) => {
-		// show prompt
-
-		if (window.confirm(`Are you sure you want to delete ${first_name} ${last_name}?`)) {
-			setAuthors((prevAuthors) => prevAuthors.filter((author) => author.id !== id));
-			setEditingRowId(null);
-			setEditName("");
-			setNewName("");
-		}
-	};
-
-	const handleEdit = (author) => {
-		setEditingRowId(author.id);
-		setEditName(`${author.first_name} ${author.last_name}`);
-	};
-
-	const handleSave = (id) => {
-		const [first_name, ...last_name_parts] = editName.trim().split(" ");
-		const last_name = last_name_parts.join(" ");
-
-		setAuthors(
-			authors.map((author) =>
-				author.id === id
-					? { ...author, first_name, last_name: last_name || author.last_name }
-					: author
-			)
-		);
-
-		setEditingRowId(null);
-		setEditName("");
-	};
 
 	const handleCancel = () => {
 		setEditingRowId(null);

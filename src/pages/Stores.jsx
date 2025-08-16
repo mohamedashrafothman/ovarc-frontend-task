@@ -4,11 +4,13 @@ import TableActions from "../components/ActionButton/TableActions";
 import Header from "../components/Header";
 import Modal from "../components/Modal";
 import Table from "../components/Table/Table";
+import { useAuth } from "../context/AuthContext";
 import useLibraryData from "../hooks/useLibraryData";
 import Loading from "./Loading";
 
 const Stores = () => {
 	const navigate = useNavigate();
+	const { isAuthenticated } = useAuth();
 
 	const handleViewStoreInventory = (storeId) => {
 		navigate(`/store/${storeId}`);
@@ -97,23 +99,27 @@ const Stores = () => {
 					),
 			},
 			{ header: "Address", accessorKey: "full_address" },
-			{
-				header: "Actions",
-				id: "actions",
-				cell: ({ row }) => (
-					<TableActions
-						row={row}
-						onEdit={
-							editingRowId === row.original.id
-								? handleCancel
-								: () => handleEdit(row.original)
-						}
-						onDelete={() => deleteStore(row.original.id, row.original.name)}
-					/>
-				),
-			},
+			...(isAuthenticated
+				? [
+						{
+							header: "Actions",
+							id: "actions",
+							cell: ({ row }) => (
+								<TableActions
+									row={row}
+									onEdit={
+										editingRowId === row.original.id
+											? handleCancel
+											: () => handleEdit(row.original)
+									}
+									onDelete={() => deleteStore(row.original.id, row.original.name)}
+								/>
+							),
+						},
+					]
+				: []),
 		],
-		[editingRowId, editName, handleSave, deleteStore]
+		[editingRowId, editName, handleSave, deleteStore, isAuthenticated]
 	);
 
 	// Initiate editing

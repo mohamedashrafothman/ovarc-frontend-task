@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import TableActions from "./ActionButton/TableActions";
 import Table from "./Table/Table";
 
@@ -15,6 +16,8 @@ const BooksTable = ({
 	isPriceShown = false,
 	isEditPriceEnabled = false,
 }) => {
+	const { isAuthenticated } = useAuth();
+
 	const [editPrice, setEditPrice] = useState("");
 
 	// event handlers
@@ -132,21 +135,25 @@ const BooksTable = ({
 					},
 				},
 			}),
-			actions: {
-				header: "Actions",
-				id: "actions",
-				cell: ({ row }) => (
-					<TableActions
-						row={row}
-						onEdit={
-							editingRowId === row.original.id
-								? handleCancel
-								: () => handleEdit(row.original)
-						}
-						onDelete={() => deleteBook(row.original.id, row.original.name)}
-					/>
-				),
-			},
+			...(isAuthenticated
+				? {
+						actions: {
+							header: "Actions",
+							id: "actions",
+							cell: ({ row }) => (
+								<TableActions
+									row={row}
+									onEdit={
+										editingRowId === row.original.id
+											? handleCancel
+											: () => handleEdit(row.original)
+									}
+									onDelete={() => deleteBook(row.original.id, row.original.name)}
+								/>
+							),
+						},
+					}
+				: {}),
 		}),
 		[
 			isPriceShown,
@@ -159,6 +166,7 @@ const BooksTable = ({
 			editPrice,
 			handleEdit,
 			deleteBook,
+			isAuthenticated,
 		]
 	);
 

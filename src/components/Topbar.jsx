@@ -1,7 +1,9 @@
-import React from "react";
 import { useLocation } from "react-router-dom";
 import usrImg from "../assets/usr.png";
+import { useAuth } from "../context/AuthContext";
+
 const Topbar = () => {
+	const { isAuthenticated, user, signIn, signOut } = useAuth();
 	const location = useLocation();
 	const path = location.pathname;
 	const title = {
@@ -43,8 +45,25 @@ const Topbar = () => {
 				<p className="font-light text-secondary-text">{title[path]?.subtitle}</p>
 			</div>
 			<div className="flex-1 flex justify-end items-center">
-				<img src={usrImg} alt="profile" className="ml-4 rounded" />
-				<p className="text-secondary-text font-light ml-1 h-full">User Name</p>
+				{isAuthenticated ? (
+					<>
+						<img src={usrImg} alt="profile" className="ml-4 rounded" />
+						<p className="text-secondary-text font-light ml-1 h-full">{user.name}</p>
+						<button
+							className="bg-main font-light text-white px-2 py-1 rounded mr-4 ms-3"
+							onClick={() => signOut()}>
+							logout
+						</button>
+					</>
+				) : (
+					<>
+						<button
+							className="bg-main font-light text-white px-2 py-1 rounded mr-4"
+							onClick={() => signIn("User name")}>
+							Login
+						</button>
+					</>
+				)}
 			</div>
 		</div>
 	);
